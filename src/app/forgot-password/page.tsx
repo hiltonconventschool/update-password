@@ -43,7 +43,7 @@ export default function ForgotPasswordPage() {
     setError(null);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: 'https://hcsaccounts.onrender.com/reset-password',
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`,
       });
       if (error) {
         throw error;
