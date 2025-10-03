@@ -40,41 +40,37 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     let isMounted = true;
+    
+    // Supabase auth event listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (isMounted) {
+        if (event === 'PASSWORD_RECOVERY') {
+          setTokenCheckStatus('valid');
+        }
+      }
+    });
 
-    const handlePasswordRecovery = () => {
-      // The presence of a hash indicates a recovery link
-      if (window.location.hash) {
-        // onAuthStateChange is triggered on page load if there's a session fragment
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          if (event === 'PASSWORD_RECOVERY' && isMounted) {
-            setTokenCheckStatus('valid');
-            subscription.unsubscribe();
-          }
-        });
+    // Check if there is a hash, which indicates a recovery link.
+    // If not, the link is invalid. This is a quick check.
+    if (!window.location.hash) {
+       setTokenCheckStatus('invalid');
+    }
 
-        // Set a timeout to handle cases where the event doesn't fire (e.g., invalid token)
-        const timeout = setTimeout(() => {
-          if (isMounted && tokenCheckStatus === 'checking') {
-            setTokenCheckStatus('invalid');
-          }
-        }, 5000); // 5-second timeout
-
-        return () => {
-          subscription.unsubscribe();
-          clearTimeout(timeout);
-        };
-      } else {
-        // No hash, so the link is definitely invalid
+    // Set a timeout to handle the case where the PASSWORD_RECOVERY event doesn't fire.
+    // This can happen if the token is already expired or invalid when the page loads.
+    const timeout = setTimeout(() => {
+      if (isMounted && tokenCheckStatus === 'checking') {
         setTokenCheckStatus('invalid');
       }
-    };
-
-    handlePasswordRecovery();
+    }, 5000); // 5 seconds
 
     return () => {
       isMounted = false;
+      subscription?.unsubscribe();
+      clearTimeout(timeout);
     };
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, [tokenCheckStatus]);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
