@@ -39,28 +39,42 @@ export default function ResetPasswordPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
+    let isMounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-        if (event === 'PASSWORD_RECOVERY') {
-            if(tokenCheckStatus === 'checking') {
-              setTokenCheckStatus('valid');
-              if (timeout) clearTimeout(timeout);
-            }
-        }
-    });
+    const handlePasswordRecovery = () => {
+      // The presence of a hash indicates a recovery link
+      if (window.location.hash) {
+        // onAuthStateChange is triggered on page load if there's a session fragment
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'PASSWORD_RECOVERY' && isMounted) {
+            setTokenCheckStatus('valid');
+            subscription.unsubscribe();
+          }
+        });
 
-    timeout = setTimeout(() => {
-        if (tokenCheckStatus === 'checking') {
+        // Set a timeout to handle cases where the event doesn't fire (e.g., invalid token)
+        const timeout = setTimeout(() => {
+          if (isMounted && tokenCheckStatus === 'checking') {
             setTokenCheckStatus('invalid');
-        }
-    }, 5000);
+          }
+        }, 5000); // 5-second timeout
+
+        return () => {
+          subscription.unsubscribe();
+          clearTimeout(timeout);
+        };
+      } else {
+        // No hash, so the link is definitely invalid
+        setTokenCheckStatus('invalid');
+      }
+    };
+
+    handlePasswordRecovery();
 
     return () => {
-        subscription.unsubscribe();
-        if (timeout) clearTimeout(timeout);
+      isMounted = false;
     };
-  }, [tokenCheckStatus]);
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
