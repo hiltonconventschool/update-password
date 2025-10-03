@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -7,15 +8,21 @@ import { cn } from "@/lib/utils";
 export function SchoolLogo({
   className,
   ...props
-}: Omit<ComponentProps<typeof Image>, "src" | "alt">) {
+}: Omit<ComponentProps<"div">, "children">) {
   return (
-    <Image
-      src="/hcsss.png"
-      alt="Hilton Convent School Logo"
-      width={64}
-      height={64}
-      className={cn("mx-auto", className)}
+    <div
+      className={cn(
+        "relative mx-auto h-16 w-16",
+        className
+      )}
       {...props}
-    />
+    >
+      <Image
+        src="/hcsss.png"
+        alt="HCSSS Logo"
+        fill
+        className="object-contain"
+      />
+    </div>
   );
 }
