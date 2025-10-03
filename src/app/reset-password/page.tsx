@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { KeyRound, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { KeyRound, Loader2, AlertCircle, CheckCircle, Lock } from "lucide-react";
 import Link from 'next/link';
 
 import { Button } from "@/components/ui/button";
@@ -175,7 +175,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-white p-4">
+    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-white p-4 font-sans">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-4">
           <div className="mx-auto">
@@ -186,6 +186,13 @@ export default function ResetPasswordPage() {
         </div>
         <div>{renderContent()}</div>
       </div>
+      <footer className="mt-8 text-center text-sm text-gray-500">
+        <div className="flex items-center justify-center gap-2">
+            <Lock className="h-4 w-4" />
+            <span>Secured by SSL</span>
+        </div>
+        <p>&copy; {new Date().getFullYear()} HCSSS. All Rights Reserved.</p>
+      </footer>
     </main>
   );
 }
