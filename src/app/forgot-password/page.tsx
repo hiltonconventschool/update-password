@@ -64,8 +64,8 @@ export default function ForgotPasswordPage() {
           <div className="mx-auto">
              <SchoolLogo className="h-16 w-16" />
           </div>
-          <h1 className="text-3xl text-red-600">HCSSS</h1>
-          <p className="text-gray-500">
+          <h1 className="text-3xl font-bold text-red-600">HCSSS</h1>
+          <p className="font-bold text-gray-500">
             {submitted ? "Check your email" : "Reset Your Password"}
           </p>
         </div>
@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
           {submitted ? (
             <Alert className="border-green-500 bg-green-50 text-green-800">
               <MailCheck className="h-4 w-4 !text-green-600" />
-              <AlertTitle className="text-green-800">Email Sent!</AlertTitle>
+              <AlertTitle className="font-bold text-green-800">Email Sent!</AlertTitle>
               <AlertDescription className="text-green-700">
                 A password reset link has been sent to the email address you provided. Please check your inbox and spam folder.
               </AlertDescription>
@@ -90,7 +90,7 @@ export default function ForgotPasswordPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email Address</FormLabel>
+                      <FormLabel className="font-bold">Email Address</FormLabel>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <FormControl>
@@ -108,7 +108,7 @@ export default function ForgotPasswordPage() {
                   </Alert>
                 )}
                 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full font-bold" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Send Password Reset Link
                 </Button>

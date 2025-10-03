@@ -103,7 +103,7 @@ export default function ResetPasswordPage() {
         return (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Invalid or Expired Link</AlertTitle>
+            <AlertTitle className="font-bold">Invalid or Expired Link</AlertTitle>
             <AlertDescription>
               This password reset link is invalid or has expired. Please{' '}
               <Link href="/forgot-password" className="font-bold underline hover:text-destructive-foreground">
@@ -117,7 +117,7 @@ export default function ResetPasswordPage() {
           return (
             <Alert className="border-green-500 bg-green-50 text-green-800">
               <CheckCircle className="h-4 w-4 !text-green-600" />
-              <AlertTitle className="text-green-800">Password Updated!</AlertTitle>
+              <AlertTitle className="font-bold text-green-800">Password Updated!</AlertTitle>
               <AlertDescription className="text-green-700">Your password has been changed successfully.</AlertDescription>
             </Alert>
           );
@@ -130,7 +130,7 @@ export default function ResetPasswordPage() {
                         name="password"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>New Password</FormLabel>
+                                <FormLabel className="font-bold">New Password</FormLabel>
                                 <div className="relative">
                                     <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                                     <FormControl>
@@ -146,7 +146,7 @@ export default function ResetPasswordPage() {
                         name="confirmPassword"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Confirm New Password</FormLabel>
+                                <FormLabel className="font-bold">Confirm New Password</FormLabel>
                                 <div className="relative">
                                     <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                                     <FormControl>
@@ -160,11 +160,11 @@ export default function ResetPasswordPage() {
                     {error && (
                         <Alert variant="destructive">
                           <AlertCircle className="h-4 w-4" />
-                          <AlertTitle>Error</AlertTitle>
+                          <AlertTitle className="font-bold">Error</AlertTitle>
                           <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}
-                    <Button type="submit" className="w-full" disabled={loading}>
+                    <Button type="submit" className="w-full font-bold" disabled={loading}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Update Password
                     </Button>
@@ -181,8 +181,8 @@ export default function ResetPasswordPage() {
           <div className="mx-auto">
             <SchoolLogo className="h-16 w-16" />
           </div>
-          <h1 className="text-3xl text-red-600">HCSSS</h1>
-          <p className="text-gray-500">Set a new password for your account</p>
+          <h1 className="text-3xl font-bold text-red-600">HCSSS</h1>
+          <p className="font-bold text-gray-500">Set a new password for your account</p>
         </div>
         <div>{renderContent()}</div>
       </div>
