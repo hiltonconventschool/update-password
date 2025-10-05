@@ -54,7 +54,8 @@ export default function ResetPasswordPage() {
     });
 
     // As a fallback, if the event doesn't fire after a few seconds,
-    // we assume the token is invalid or expired.
+    // we assume the token is invalid or expired. This handles cases where the user
+    // navigates to the page directly without a valid token.
     const timer = setTimeout(() => {
         if (isMounted && pageState === 'checking') {
            setPageState('error');
@@ -66,7 +67,8 @@ export default function ResetPasswordPage() {
         subscription?.unsubscribe();
         clearTimeout(timer);
     };
-  }, [pageState]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -209,5 +211,3 @@ export default function ResetPasswordPage() {
     </main>
   );
 }
-
-    

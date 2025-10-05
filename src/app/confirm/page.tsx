@@ -29,9 +29,12 @@ export default function ConfirmEmailChangePage() {
     } else {
       // If the parameter isn't there, this page was likely accessed directly
       // or the link was malformed.
-      if (isMounted) {
-        setPageState('error');
-      }
+      const timer = setTimeout(() => {
+          if (isMounted) {
+            setPageState('error');
+          }
+      }, 3000);
+      return () => clearTimeout(timer);
     }
     
     return () => { isMounted = false; };
@@ -95,5 +98,3 @@ export default function ConfirmEmailChangePage() {
     </main>
   );
 }
-
-    
