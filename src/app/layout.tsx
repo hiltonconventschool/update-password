@@ -16,6 +16,9 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: 'HCSSS Account Services',
   description: 'Manage your HCSSS account',
+  icons: {
+    icon: '/hcsss.png',
+  },
 };
 
 export default function RootLayout({

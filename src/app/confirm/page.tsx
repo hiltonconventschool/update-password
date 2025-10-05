@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,30 +12,84 @@ type PageState = 'checking' | 'confirmed' | 'error';
 
 export default function ConfirmEmailChangePage() {
   const [pageState, setPageState] = useState<PageState>('checking');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect(() => {
     let isMounted = true;
 
-    // Supabase puts the token information in the URL search parameters (e.g. ?type=email_change)
-    // after a successful redirect. The token has already been verified and consumed by Supabase
-    // before the redirect happens. We just need to check for the presence of the `type` parameter
-    // to confirm that we arrived here from a valid confirmation link.
-    const searchParams = new URLSearchParams(window.location.search);
-    if (searchParams.get('type') === 'email_change') {
-      if (isMounted) {
-        setPageState('confirmed');
-      }
-    } else {
-      // If the parameter isn't there, this page was likely accessed directly
-      // or the link was malformed.
-      const timer = setTimeout(() => {
+    const handleEmailChange = async () => {
+      try {
+        // Get the hash fragment (everything after #) which Supabase uses for auth tokens
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const searchParams = new URLSearchParams(window.location.search);
+        
+        // Check for token in hash (Supabase's primary method)
+        const accessToken = hashParams.get('access_token');
+        const type = hashParams.get('type');
+        
+        // Also check search params as fallback
+        const codeParam = searchParams.get('code');
+        const typeParam = searchParams.get('type');
+
+        // If we have an access token and type in hash, use it
+        if (accessToken && type === 'recovery') {
+          // This handles the token automatically via Supabase's auth listener
           if (isMounted) {
+            setPageState('confirmed');
+          }
+          return;
+        }
+
+        // If we have a code parameter, exchange it for a session
+        if (codeParam) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(codeParam);
+          
+          if (error) {
+            console.error('Error exchanging code:', error);
+            if (isMounted) {
+              setErrorMessage(error.message);
+              setPageState('error');
+            }
+            return;
+          }
+
+          if (data.session) {
+            if (isMounted) {
+              setPageState('confirmed');
+            }
+            return;
+          }
+        }
+
+        // Check if type parameter indicates email change
+        if (typeParam === 'email_change' || type === 'email_change') {
+          if (isMounted) {
+            setPageState('confirmed');
+          }
+          return;
+        }
+
+        // If none of the above, wait a bit and show error
+        const timer = setTimeout(() => {
+          if (isMounted) {
+            setErrorMessage('No valid confirmation token found in URL.');
             setPageState('error');
           }
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-    
+        }, 3000);
+
+        return () => clearTimeout(timer);
+
+      } catch (err) {
+        console.error('Unexpected error:', err);
+        if (isMounted) {
+          setErrorMessage('An unexpected error occurred.');
+          setPageState('error');
+        }
+      }
+    };
+
+    handleEmailChange();
+
     return () => { isMounted = false; };
   }, []);
 
@@ -51,13 +104,23 @@ export default function ConfirmEmailChangePage() {
         );
       case 'confirmed':
         return (
-          <Alert className="border-green-500 bg-green-50 text-green-800">
-            <MailCheck className="h-4 w-4 !text-green-600" />
-            <AlertTitle className="font-bold text-green-800">Email Confirmed!</AlertTitle>
-            <AlertDescription className="text-green-700">
+          <div className="space-y-4">
+            <Alert className="border-green-500 bg-green-50 text-green-800">
+              <MailCheck className="h-4 w-4 !text-green-600" />
+              <AlertTitle className="font-bold text-green-800">Email Confirmed!</AlertTitle>
+              <AlertDescription className="text-green-700">
                 Your new email address has been successfully updated. You can now use it to log in.
-            </AlertDescription>
-          </Alert>
+              </AlertDescription>
+            </Alert>
+            <div className="text-center">
+              <Link 
+                href="/login" 
+                className="text-red-600 hover:text-red-700 font-medium underline"
+              >
+                Go to Login
+              </Link>
+            </div>
+          </div>
         );
       case 'error':
         return (
@@ -65,7 +128,7 @@ export default function ConfirmEmailChangePage() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle className="font-bold">Invalid or Expired Link</AlertTitle>
             <AlertDescription>
-              This confirmation link is invalid or has expired. Please try changing your email again.
+              {errorMessage || 'This confirmation link is invalid or has expired. Please try changing your email again.'}
             </AlertDescription>
           </Alert>
         );
@@ -90,8 +153,8 @@ export default function ConfirmEmailChangePage() {
       </div>
       <footer className="mt-8 text-center text-sm text-foreground/60">
         <div className="flex items-center justify-center gap-2">
-            <Lock className="h-4 w-4" />
-            <span>Secured by SSL</span>
+          <Lock className="h-4 w-4" />
+          <span>Secured by SSL</span>
         </div>
         <p>&copy; {new Date().getFullYear()} HCSSS. All Rights Reserved.</p>
       </footer>
