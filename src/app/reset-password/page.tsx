@@ -31,7 +31,7 @@ const formSchema = z.object({
   path: ["confirmPassword"],
 });
 
-type PageType = 'password' | 'email' | 'invalid_token' | 'checking';
+type PageType = 'password' | 'invalid_token' | 'checking';
 
 export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
@@ -43,54 +43,25 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     let isMounted = true;
-    const hash = window.location.hash;
-
-    const processToken = async () => {
-        if (hash.includes('type=recovery')) {
-            const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-                if (isMounted && event === "PASSWORD_RECOVERY" && session) {
-                    setPageType('password');
-                    subscription?.unsubscribe();
-                }
-            });
-            return () => {
-                isMounted = false;
-                subscription?.unsubscribe();
-            };
-        } else if (hash.includes('type=email_change')) {
-            const params = new URLSearchParams(hash.substring(1));
-            const accessToken = params.get('access_token');
-            if (accessToken) {
-                 // Supabase handles the session verification implicitly with verifyOtp
-                 const { error } = await supabase.auth.verifyOtp({
-                    token_hash: accessToken,
-                    type: 'email_change',
-                });
-
-                if (isMounted) {
-                    if (error) {
-                        setPageType('invalid_token');
-                    } else {
-                        setPageType('email');
-                    }
-                }
-            } else {
-                 if (isMounted) setPageType('invalid_token');
-            }
-        } else {
-            if (isMounted && pageType === 'checking') {
-                setTimeout(() => {
-                    if (isMounted && pageType === 'checking') {
-                       setPageType('invalid_token');
-                    }
-                }, 1000);
-            }
-        }
-    };
     
-    processToken();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (isMounted && event === "PASSWORD_RECOVERY" && session) {
+            setPageType('password');
+            subscription?.unsubscribe();
+        }
+    });
 
-    return () => { isMounted = false; };
+    const timer = setTimeout(() => {
+        if (isMounted && pageType === 'checking') {
+           setPageType('invalid_token');
+        }
+    }, 5000);
+
+    return () => {
+        isMounted = false;
+        subscription?.unsubscribe();
+        clearTimeout(timer);
+    };
   }, [pageType]);
 
 
@@ -146,17 +117,7 @@ export default function ResetPasswordPage() {
           </Alert>
         );
     }
-    
-    if (pageType === 'email') {
-      return (
-          <Alert className="border-green-500 bg-green-50 text-green-800">
-          <CheckCircle className="h-4 w-4 !text-green-600" />
-          <AlertTitle className="font-bold text-green-800">Email Confirmed!</AlertTitle>
-          <AlertDescription className="text-green-700">Your new email address has been successfully confirmed.</AlertDescription>
-        </Alert>
-      )
-    }
-    
+        
     if (submitted) {
       return (
         <Alert className="border-green-500 bg-green-50 text-green-800">
@@ -167,55 +128,59 @@ export default function ResetPasswordPage() {
       );
     }
 
-    return (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="font-bold">New Password</FormLabel>
-                            <div className="relative">
-                                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                <FormControl>
-                                    <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
-                                </FormControl>
-                            </div>
-                            <FormMessage />
-                        </FormItem>
+    if (pageType === 'password') {
+        return (
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="font-bold">New Password</FormLabel>
+                                <div className="relative">
+                                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                    <FormControl>
+                                        <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
+                                    </FormControl>
+                                </div>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="font-bold">Confirm New Password</FormLabel>
+                                <div className="relative">
+                                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                    <FormControl>
+                                        <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
+                                    </FormControl>
+                                </div>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    {error && (
+                        <Alert variant="destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle className="font-bold">Error</AlertTitle>
+                          <AlertDescription>{error}</AlertDescription>
+                        </Alert>
                     )}
-                />
-                <FormField
-                    control={form.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="font-bold">Confirm New Password</FormLabel>
-                            <div className="relative">
-                                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                <FormControl>
-                                    <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
-                                </FormControl>
-                            </div>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                {error && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle className="font-bold">Error</AlertTitle>
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                )}
-                <Button type="submit" className="w-full font-bold" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Update Password
-                </Button>
-            </form>
-        </Form>
-    );
+                    <Button type="submit" className="w-full font-bold" disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Update Password
+                    </Button>
+                </form>
+            </Form>
+        );
+    }
+
+    return null;
   }
 
   return (
@@ -242,5 +207,3 @@ export default function ResetPasswordPage() {
     </main>
   );
 }
-
-    

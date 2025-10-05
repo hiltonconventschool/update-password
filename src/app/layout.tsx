@@ -13,8 +13,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: 'HCSSS Password Reset',
-  description: 'Reset your password for HCSSS',
+  title: 'HCSSS Account Services',
+  description: 'Manage your HCSSS account',
 };
 
 export default function RootLayout({
