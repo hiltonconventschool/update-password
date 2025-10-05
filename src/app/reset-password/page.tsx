@@ -45,55 +45,51 @@ export default function ResetPasswordPage() {
     let isMounted = true;
     const hash = window.location.hash;
 
-    if (hash.includes('type=recovery')) {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          if (isMounted && event === "PASSWORD_RECOVERY" && session) {
-            setPageType('password');
-            subscription?.unsubscribe();
-          }
-        });
+    const processToken = async () => {
+        if (hash.includes('type=recovery')) {
+            const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+                if (isMounted && event === "PASSWORD_RECOVERY" && session) {
+                    setPageType('password');
+                    subscription?.unsubscribe();
+                }
+            });
+            return () => {
+                isMounted = false;
+                subscription?.unsubscribe();
+            };
+        } else if (hash.includes('type=email_change')) {
+            const params = new URLSearchParams(hash.substring(1));
+            const accessToken = params.get('access_token');
+            if (accessToken) {
+                 // Supabase handles the session verification implicitly with verifyOtp
+                 const { error } = await supabase.auth.verifyOtp({
+                    token_hash: accessToken,
+                    type: 'email_change',
+                });
 
-         // Add a timeout to handle cases where the event isn't caught
-        setTimeout(() => {
-          if (isMounted && pageType === 'checking') {
-            setPageType('invalid_token');
-          }
-        }, 3000);
-
-
-        return () => {
-          isMounted = false;
-          subscription?.unsubscribe();
-        };
-
-    } else if (hash.includes('type=email_change')) {
-         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          if (isMounted && event === "USER_UPDATED" && session) {
-            setPageType('email');
-            subscription?.unsubscribe();
-          }
-        });
-        
-         // Add a timeout to handle cases where the event isn't caught
-        setTimeout(() => {
-          if (isMounted && pageType === 'checking') {
-            setPageType('invalid_token');
-          }
-        }, 3000);
-
-         return () => {
-          isMounted = false;
-          subscription?.unsubscribe();
-        };
-
-    } else {
-        setTimeout(() => {
-            if (isMounted && pageType === 'checking') {
-                setPageType('invalid_token');
+                if (isMounted) {
+                    if (error) {
+                        setPageType('invalid_token');
+                    } else {
+                        setPageType('email');
+                    }
+                }
+            } else {
+                 if (isMounted) setPageType('invalid_token');
             }
-        }, 1000);
-    }
+        } else {
+            if (isMounted && pageType === 'checking') {
+                setTimeout(() => {
+                    if (isMounted && pageType === 'checking') {
+                       setPageType('invalid_token');
+                    }
+                }, 1000);
+            }
+        }
+    };
     
+    processToken();
+
     return () => { isMounted = false; };
   }, [pageType]);
 
@@ -231,7 +227,7 @@ export default function ResetPasswordPage() {
           </div>
           <h1 className="text-3xl font-bold text-red-600">HCSSS</h1>
           <p className="font-bold text-gray-500">
-            {pageType === 'password' ? 'Set a new password for your account' : 'Confirm your action'}
+            {pageType === 'password' && !submitted ? 'Set a new password for your account' : 'Confirm your action'}
           </p>
         </div>
         <div>{renderContent()}</div>
@@ -246,3 +242,5 @@ export default function ResetPasswordPage() {
     </main>
   );
 }
+
+    
