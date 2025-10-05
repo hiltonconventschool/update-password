@@ -31,46 +31,53 @@ const formSchema = z.object({
   path: ["confirmPassword"],
 });
 
+type PageType = 'password' | 'email' | 'invalid_token';
+
 export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tokenCheckStatus, setTokenCheckStatus] = useState<'checking' | 'valid' | 'invalid'>('checking');
-  const [pageType, setPageType] = useState<'password' | 'email'>('password');
+  const [pageState, setPageState] = useState<'checking' | 'ready'>('checking');
+  const [pageType, setPageType] = useState<PageType>('password');
+
   const { toast } = useToast();
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (isMounted) {
-        if (event === 'PASSWORD_RECOVERY') {
-          setPageType('password');
-          setTokenCheckStatus('valid');
-        } else if (event === 'USER_UPDATED') {
-          // This event fires for email change confirmation
-           setPageType('email');
-           setTokenCheckStatus('valid');
-        }
+      if (!isMounted) return;
+
+      if (event === "PASSWORD_RECOVERY" && session) {
+        setPageType('password');
+        setPageState('ready');
+      } else if (event === "USER_UPDATED" && session) {
+        setPageType('email');
+        setPageState('ready');
       }
     });
 
-    if (!window.location.hash) {
-       setTokenCheckStatus('invalid');
+    const hash = window.location.hash;
+    if (!hash.includes('access_token') || !hash.includes('type')) {
+       const timeout = setTimeout(() => {
+        if(isMounted && pageState === 'checking') {
+          setPageType('invalid_token');
+          setPageState('ready');
+        }
+       }, 2000);
+       return () => {
+         clearTimeout(timeout);
+         subscription?.unsubscribe();
+         isMounted = false;
+       }
     }
 
-    const timeout = setTimeout(() => {
-      if (isMounted && tokenCheckStatus === 'checking') {
-        setTokenCheckStatus('invalid');
-      }
-    }, 5000); 
 
     return () => {
       isMounted = false;
       subscription?.unsubscribe();
-      clearTimeout(timeout);
     };
-  }, [tokenCheckStatus]);
+  }, []);
 
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -102,16 +109,17 @@ export default function ResetPasswordPage() {
   }
 
   const renderContent = () => {
-    switch (tokenCheckStatus) {
-      case 'checking':
-        return (
-          <div className="flex flex-col items-center justify-center space-y-4 py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-red-600" />
-            <p className="text-gray-500">Verifying link...</p>
-          </div>
-        );
-      case 'invalid':
-        return (
+    if (pageState === 'checking') {
+      return (
+        <div className="flex flex-col items-center justify-center space-y-4 py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+          <p className="text-gray-500">Verifying link...</p>
+        </div>
+      );
+    }
+    
+    if (pageType === 'invalid_token') {
+       return (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle className="font-bold">Invalid or Expired Link</AlertTitle>
@@ -123,76 +131,77 @@ export default function ResetPasswordPage() {
             </AlertDescription>
           </Alert>
         );
-      case 'valid':
-        if (pageType === 'email') {
-          return (
-             <Alert className="border-green-500 bg-green-50 text-green-800">
-              <CheckCircle className="h-4 w-4 !text-green-600" />
-              <AlertTitle className="font-bold text-green-800">Email Confirmed!</AlertTitle>
-              <AlertDescription className="text-green-700">Your new email address has been successfully confirmed.</AlertDescription>
-            </Alert>
-          )
-        }
-        
-        if (submitted) {
-          return (
-            <Alert className="border-green-500 bg-green-50 text-green-800">
-              <CheckCircle className="h-4 w-4 !text-green-600" />
-              <AlertTitle className="font-bold text-green-800">Password Updated!</AlertTitle>
-              <AlertDescription className="text-green-700">Your password has been changed successfully.</AlertDescription>
-            </Alert>
-          );
-        }
-        return (
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="font-bold">New Password</FormLabel>
-                                <div className="relative">
-                                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                    <FormControl>
-                                        <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
-                                    </FormControl>
-                                </div>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="font-bold">Confirm New Password</FormLabel>
-                                <div className="relative">
-                                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                    <FormControl>
-                                        <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
-                                    </FormControl>
-                                </div>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    {error && (
-                        <Alert variant="destructive">
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertTitle className="font-bold">Error</AlertTitle>
-                          <AlertDescription>{error}</AlertDescription>
-                        </Alert>
-                    )}
-                    <Button type="submit" className="w-full font-bold" disabled={loading}>
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Update Password
-                    </Button>
-                </form>
-            </Form>
-        );
     }
+    
+    if (pageType === 'email') {
+      return (
+          <Alert className="border-green-500 bg-green-50 text-green-800">
+          <CheckCircle className="h-4 w-4 !text-green-600" />
+          <AlertTitle className="font-bold text-green-800">Email Confirmed!</AlertTitle>
+          <AlertDescription className="text-green-700">Your new email address has been successfully confirmed.</AlertDescription>
+        </Alert>
+      )
+    }
+    
+    if (submitted) {
+      return (
+        <Alert className="border-green-500 bg-green-50 text-green-800">
+          <CheckCircle className="h-4 w-4 !text-green-600" />
+          <AlertTitle className="font-bold text-green-800">Password Updated!</AlertTitle>
+          <AlertDescription className="text-green-700">Your password has been changed successfully.</AlertDescription>
+        </Alert>
+      );
+    }
+
+    return (
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="font-bold">New Password</FormLabel>
+                            <div className="relative">
+                                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                <FormControl>
+                                    <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
+                                </FormControl>
+                            </div>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="font-bold">Confirm New Password</FormLabel>
+                            <div className="relative">
+                                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                <FormControl>
+                                    <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
+                                </FormControl>
+                            </div>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                {error && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle className="font-bold">Error</AlertTitle>
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
+                <Button type="submit" className="w-full font-bold" disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Update Password
+                </Button>
+            </form>
+        </Form>
+    );
   }
 
   return (
@@ -203,7 +212,9 @@ export default function ResetPasswordPage() {
             <SchoolLogo className="h-16 w-16" />
           </div>
           <h1 className="text-3xl font-bold text-red-600">HCSSS</h1>
-          <p className="font-bold text-gray-500">Set a new password for your account</p>
+          <p className="font-bold text-gray-500">
+            {pageType === 'password' ? 'Set a new password for your account' : 'Confirm your action'}
+          </p>
         </div>
         <div>{renderContent()}</div>
       </div>
@@ -217,4 +228,3 @@ export default function ResetPasswordPage() {
     </main>
   );
 }
-
