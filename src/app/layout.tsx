@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { Poppins } from 'next/font/google';
 import { AuthListener } from '@/components/auth-listener';
+import { ThemeProvider } from '@/components/theme-provider';
 
 const poppins = Poppins({
   weight: ['400', '700'],
@@ -33,9 +34,16 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased">
-        <AuthListener />
-        {children}
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthListener />
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );
