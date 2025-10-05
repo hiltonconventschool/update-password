@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, AlertCircle, CheckCircle, Lock, MailCheck } from "lucide-react";
+import { Loader2, AlertCircle, MailCheck, Lock } from "lucide-react";
 import Link from 'next/link';
 
 import { supabase } from "@/lib/supabase/client";
@@ -17,39 +17,20 @@ export default function ConfirmEmailChangePage() {
   useEffect(() => {
     let isMounted = true;
     
-    const processEmailChange = async () => {
-      // Supabase appends the token to the hash for email change links
-      const hash = window.location.hash;
-      if (!hash.includes('type=email_change')) {
-        if (isMounted) setPageState('error');
-        return;
-      }
-
-      const params = new URLSearchParams(hash.substring(1)); // remove '#'
-      const accessToken = params.get('access_token');
-      
-      if (!accessToken) {
-        if (isMounted) setPageState('error');
-        return;
-      }
-      
-      // The verifyOtp function handles email change confirmations when the type is 'email_change'
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: accessToken,
-        type: 'email_change',
-      });
-
+    // The presence of the email_change type in the hash is our signal of success.
+    // Supabase already verified the token on the server before redirecting.
+    // We don't need to call verifyOtp again, as the token is single-use.
+    if (window.location.hash.includes('type=email_change')) {
       if (isMounted) {
-        if (error) {
-          setPageState('error');
-        } else {
-          setPageState('confirmed');
-        }
+        setPageState('confirmed');
       }
-    };
+    } else {
+      // If the hash isn't there, it's an invalid attempt to access the page.
+      if (isMounted) {
+        setPageState('error');
+      }
+    }
     
-    processEmailChange();
-
     return () => { isMounted = false; };
   }, []);
 
