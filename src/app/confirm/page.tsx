@@ -16,16 +16,22 @@ export default function ConfirmEmailChangePage() {
 
   useEffect(() => {
     let isMounted = true;
-    
-    // The presence of the email_change type in the hash is our signal of success.
-    // Supabase already verified the token on the server before redirecting.
-    // We don't need to call verifyOtp again, as the token is single-use.
-    if (window.location.hash.includes('type=email_change')) {
+
+    // Supabase puts the token information in the URL search parameters, not the hash.
+    // We check for `type=email_change` to confirm a successful redirect.
+    // The token has already been verified by Supabase on the server side before the redirect.
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('type') === 'email_change') {
+      if (isMounted) {
+        setPageState('confirmed');
+      }
+    } else if (window.location.hash.includes('type=email_change')) {
+      // Also handle the hash format for robustness, as Supabase has used it.
       if (isMounted) {
         setPageState('confirmed');
       }
     } else {
-      // If the hash isn't there, it's an invalid attempt to access the page.
+      // If the parameters aren't there, it's an invalid attempt to access the page.
       if (isMounted) {
         setPageState('error');
       }
