@@ -36,33 +36,34 @@ export default function ResetPasswordPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tokenCheckStatus, setTokenCheckStatus] = useState<'checking' | 'valid' | 'invalid'>('checking');
+  const [pageType, setPageType] = useState<'password' | 'email'>('password');
   const { toast } = useToast();
 
   useEffect(() => {
     let isMounted = true;
     
-    // Supabase auth event listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (isMounted) {
         if (event === 'PASSWORD_RECOVERY') {
+          setPageType('password');
           setTokenCheckStatus('valid');
+        } else if (event === 'USER_UPDATED') {
+          // This event fires for email change confirmation
+           setPageType('email');
+           setTokenCheckStatus('valid');
         }
       }
     });
 
-    // Check if there is a hash, which indicates a recovery link.
-    // If not, the link is invalid. This is a quick check.
     if (!window.location.hash) {
        setTokenCheckStatus('invalid');
     }
 
-    // Set a timeout to handle the case where the PASSWORD_RECOVERY event doesn't fire.
-    // This can happen if the token is already expired or invalid when the page loads.
     const timeout = setTimeout(() => {
       if (isMounted && tokenCheckStatus === 'checking') {
         setTokenCheckStatus('invalid');
       }
-    }, 5000); // 5 seconds
+    }, 5000); 
 
     return () => {
       isMounted = false;
@@ -106,7 +107,7 @@ export default function ResetPasswordPage() {
         return (
           <div className="flex flex-col items-center justify-center space-y-4 py-8">
             <Loader2 className="h-8 w-8 animate-spin text-red-600" />
-            <p className="text-gray-500">Verifying reset link...</p>
+            <p className="text-gray-500">Verifying link...</p>
           </div>
         );
       case 'invalid':
@@ -115,7 +116,7 @@ export default function ResetPasswordPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle className="font-bold">Invalid or Expired Link</AlertTitle>
             <AlertDescription>
-              This password reset link is invalid or has expired. Please{' '}
+              This link is invalid or has expired. Please{' '}
               <Link href="/forgot-password" className="font-bold underline hover:text-destructive-foreground">
                 request a new one
               </Link>.
@@ -123,6 +124,16 @@ export default function ResetPasswordPage() {
           </Alert>
         );
       case 'valid':
+        if (pageType === 'email') {
+          return (
+             <Alert className="border-green-500 bg-green-50 text-green-800">
+              <CheckCircle className="h-4 w-4 !text-green-600" />
+              <AlertTitle className="font-bold text-green-800">Email Confirmed!</AlertTitle>
+              <AlertDescription className="text-green-700">Your new email address has been successfully confirmed.</AlertDescription>
+            </Alert>
+          )
+        }
+        
         if (submitted) {
           return (
             <Alert className="border-green-500 bg-green-50 text-green-800">
@@ -206,3 +217,4 @@ export default function ResetPasswordPage() {
     </main>
   );
 }
+
