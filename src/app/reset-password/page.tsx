@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -43,29 +42,60 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     let isMounted = true;
     
-    // This listener fires when the user is redirected back from the password reset email.
-    // The session is restored, and the event is PASSWORD_RECOVERY.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (isMounted && event === "PASSWORD_RECOVERY") {
-        setPageState('form');
-        // We only need to hear this event once.
-        subscription?.unsubscribe();
-      }
-    });
+    const checkRecoveryToken = () => {
+      // Check URL hash for recovery token
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const type = hashParams.get('type');
+      const accessToken = hashParams.get('access_token');
+      
+      console.log('=== PASSWORD RECOVERY DEBUG ===');
+      console.log('Full URL:', window.location.href);
+      console.log('Hash:', window.location.hash);
+      console.log('Type:', type);
+      console.log('Has access token:', !!accessToken);
 
-    // As a fallback, if the event doesn't fire after a few seconds,
-    // we assume the token is invalid or expired. This handles cases where the user
-    // navigates to the page directly without a valid token.
-    const timer = setTimeout(() => {
-        if (isMounted && pageState === 'checking') {
-           setPageState('error');
+      // If we have type=recovery and access_token in the hash, it's valid
+      if (type === 'recovery' && accessToken) {
+        console.log('✓ Valid recovery token found');
+        if (isMounted) {
+          setPageState('form');
         }
-    }, 5000);
+        return true;
+      }
+      
+      return false;
+    };
 
-    return () => {
+    // Check immediately
+    const hasToken = checkRecoveryToken();
+    
+    if (!hasToken) {
+      // Also listen for auth state changes as backup
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        console.log('Auth state change:', event);
+        if (isMounted && event === "PASSWORD_RECOVERY") {
+          console.log('✓ PASSWORD_RECOVERY event received');
+          setPageState('form');
+        }
+      });
+
+      // Only show error if no token found after waiting
+      const timer = setTimeout(() => {
+        if (isMounted && pageState === 'checking') {
+          console.log('✗ No valid recovery token found');
+          setPageState('error');
+        }
+      }, 5000);
+
+      return () => {
         isMounted = false;
         subscription?.unsubscribe();
         clearTimeout(timer);
+      };
+    }
+
+    return () => {
+      isMounted = false;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -168,7 +198,9 @@ export default function ResetPasswordPage() {
                 <Alert className="border-green-500 bg-green-50 text-green-800">
                   <CheckCircle className="h-4 w-4 !text-green-600" />
                   <AlertTitle className="font-bold text-green-800">Password Updated!</AlertTitle>
-                  <AlertDescription className="text-green-700">Your password has been changed successfully.</AlertDescription>
+                  <AlertDescription className="text-green-700">
+                    Your password has been changed successfully. You can now login with your new password safely.
+                  </AlertDescription>
                 </Alert>
               );
         case 'error':

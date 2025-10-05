@@ -17,70 +17,64 @@ export default function ConfirmEmailChangePage() {
   useEffect(() => {
     let isMounted = true;
 
-    const handleEmailChange = async () => {
+    const handleEmailChange = () => {
       try {
-        // Get the hash fragment (everything after #) which Supabase uses for auth tokens
+        // Get both hash and search params
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const searchParams = new URLSearchParams(window.location.search);
         
-        // Check for token in hash (Supabase's primary method)
+        // Get relevant parameters
+        const hashType = hashParams.get('type');
+        const searchType = searchParams.get('type');
+        const code = searchParams.get('code');
+        const token = searchParams.get('token');
         const accessToken = hashParams.get('access_token');
-        const type = hashParams.get('type');
         
-        // Also check search params as fallback
-        const codeParam = searchParams.get('code');
-        const typeParam = searchParams.get('type');
+        // Debug: Log everything
+        console.log('=== EMAIL CONFIRMATION DEBUG ===');
+        console.log('Full URL:', window.location.href);
+        console.log('Search params:', window.location.search);
+        console.log('Hash:', window.location.hash);
+        console.log('Parsed values:', { 
+          hashType, 
+          searchType, 
+          code, 
+          token,
+          accessToken 
+        });
 
-        // If we have an access token and type in hash, use it
-        if (accessToken && type === 'recovery') {
-          // This handles the token automatically via Supabase's auth listener
+        // If we have a code parameter from the redirect, email is confirmed
+        if (code) {
+          console.log('✓ Code parameter found - Email confirmed!');
           if (isMounted) {
             setPageState('confirmed');
           }
           return;
         }
 
-        // If we have a code parameter, exchange it for a session
-        if (codeParam) {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(codeParam);
-          
-          if (error) {
-            console.error('Error exchanging code:', error);
-            if (isMounted) {
-              setErrorMessage(error.message);
-              setPageState('error');
-            }
-            return;
-          }
-
-          if (data.session) {
-            if (isMounted) {
-              setPageState('confirmed');
-            }
-            return;
-          }
-        }
-
-        // Check if type parameter indicates email change
-        if (typeParam === 'email_change' || type === 'email_change') {
+        // Check other possible parameters
+        if (
+          hashType === 'email_change' || 
+          searchType === 'email_change' ||
+          token ||
+          accessToken
+        ) {
+          console.log('✓ Valid email change parameter found - Email confirmed!');
           if (isMounted) {
             setPageState('confirmed');
           }
           return;
         }
 
-        // If none of the above, wait a bit and show error
-        const timer = setTimeout(() => {
-          if (isMounted) {
-            setErrorMessage('No valid confirmation token found in URL.');
-            setPageState('error');
-          }
-        }, 3000);
-
-        return () => clearTimeout(timer);
+        // If no parameters found, this was accessed directly
+        console.log('✗ No valid parameters found');
+        if (isMounted) {
+          setErrorMessage('This page should only be accessed via the email confirmation link.');
+          setPageState('error');
+        }
 
       } catch (err) {
-        console.error('Unexpected error:', err);
+        console.error('Error during confirmation:', err);
         if (isMounted) {
           setErrorMessage('An unexpected error occurred.');
           setPageState('error');
@@ -88,9 +82,12 @@ export default function ConfirmEmailChangePage() {
       }
     };
 
+    // Run immediately
     handleEmailChange();
 
-    return () => { isMounted = false; };
+    return () => { 
+      isMounted = false;
+    };
   }, []);
 
   const renderContent = () => {
@@ -104,23 +101,13 @@ export default function ConfirmEmailChangePage() {
         );
       case 'confirmed':
         return (
-          <div className="space-y-4">
-            <Alert className="border-green-500 bg-green-50 text-green-800">
-              <MailCheck className="h-4 w-4 !text-green-600" />
-              <AlertTitle className="font-bold text-green-800">Email Confirmed!</AlertTitle>
-              <AlertDescription className="text-green-700">
-                Your new email address has been successfully updated. You can now use it to log in.
-              </AlertDescription>
-            </Alert>
-            <div className="text-center">
-              <Link 
-                href="/login" 
-                className="text-red-600 hover:text-red-700 font-medium underline"
-              >
-                Go to Login
-              </Link>
-            </div>
-          </div>
+          <Alert className="border-green-500 bg-green-50 text-green-800">
+            <MailCheck className="h-4 w-4 !text-green-600" />
+            <AlertTitle className="font-bold text-green-800">Email Confirmed!</AlertTitle>
+            <AlertDescription className="text-green-700">
+              Your new email address has been successfully updated. You can now login with your new email safely.
+            </AlertDescription>
+          </Alert>
         );
       case 'error':
         return (
