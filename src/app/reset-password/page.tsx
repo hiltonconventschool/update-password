@@ -31,53 +31,71 @@ const formSchema = z.object({
   path: ["confirmPassword"],
 });
 
-type PageType = 'password' | 'email' | 'invalid_token';
+type PageType = 'password' | 'email' | 'invalid_token' | 'checking';
 
 export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pageState, setPageState] = useState<'checking' | 'ready'>('checking');
-  const [pageType, setPageType] = useState<PageType>('password');
+  const [pageType, setPageType] = useState<PageType>('checking');
 
   const { toast } = useToast();
 
   useEffect(() => {
     let isMounted = true;
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!isMounted) return;
-
-      if (event === "PASSWORD_RECOVERY" && session) {
-        setPageType('password');
-        setPageState('ready');
-      } else if (event === "USER_UPDATED" && session) {
-        setPageType('email');
-        setPageState('ready');
-      }
-    });
-
     const hash = window.location.hash;
-    if (!hash.includes('access_token') || !hash.includes('type')) {
-       const timeout = setTimeout(() => {
-        if(isMounted && pageState === 'checking') {
-          setPageType('invalid_token');
-          setPageState('ready');
-        }
-       }, 2000);
-       return () => {
-         clearTimeout(timeout);
-         subscription?.unsubscribe();
-         isMounted = false;
-       }
+
+    if (hash.includes('type=recovery')) {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (isMounted && event === "PASSWORD_RECOVERY" && session) {
+            setPageType('password');
+            subscription?.unsubscribe();
+          }
+        });
+
+         // Add a timeout to handle cases where the event isn't caught
+        setTimeout(() => {
+          if (isMounted && pageType === 'checking') {
+            setPageType('invalid_token');
+          }
+        }, 3000);
+
+
+        return () => {
+          isMounted = false;
+          subscription?.unsubscribe();
+        };
+
+    } else if (hash.includes('type=email_change')) {
+         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (isMounted && event === "USER_UPDATED" && session) {
+            setPageType('email');
+            subscription?.unsubscribe();
+          }
+        });
+        
+         // Add a timeout to handle cases where the event isn't caught
+        setTimeout(() => {
+          if (isMounted && pageType === 'checking') {
+            setPageType('invalid_token');
+          }
+        }, 3000);
+
+         return () => {
+          isMounted = false;
+          subscription?.unsubscribe();
+        };
+
+    } else {
+        setTimeout(() => {
+            if (isMounted && pageType === 'checking') {
+                setPageType('invalid_token');
+            }
+        }, 1000);
     }
-
-
-    return () => {
-      isMounted = false;
-      subscription?.unsubscribe();
-    };
-  }, []);
+    
+    return () => { isMounted = false; };
+  }, [pageType]);
 
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -109,7 +127,7 @@ export default function ResetPasswordPage() {
   }
 
   const renderContent = () => {
-    if (pageState === 'checking') {
+    if (pageType === 'checking') {
       return (
         <div className="flex flex-col items-center justify-center space-y-4 py-8">
           <Loader2 className="h-8 w-8 animate-spin text-red-600" />
