@@ -75,20 +75,20 @@ export default function ConfirmEmailChangePage() {
   };
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-white p-4 font-sans">
+    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4 font-sans">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-4">
           <div className="mx-auto">
             <SchoolLogo className="h-16 w-16" />
           </div>
           <h1 className="text-3xl font-bold text-red-600">HCSSS</h1>
-          <p className="font-bold text-gray-500">
+          <p className="font-bold text-foreground/80">
             Email Change Confirmation
           </p>
         </div>
         <div>{renderContent()}</div>
       </div>
-      <footer className="mt-8 text-center text-sm text-gray-500">
+      <footer className="mt-8 text-center text-sm text-foreground/60">
         <div className="flex items-center justify-center gap-2">
             <Lock className="h-4 w-4" />
             <span>Secured by SSL</span>
