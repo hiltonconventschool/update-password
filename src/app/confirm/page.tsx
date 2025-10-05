@@ -17,21 +17,18 @@ export default function ConfirmEmailChangePage() {
   useEffect(() => {
     let isMounted = true;
 
-    // Supabase puts the token information in the URL search parameters, not the hash.
-    // We check for `type=email_change` to confirm a successful redirect.
-    // The token has already been verified by Supabase on the server side before the redirect.
+    // Supabase puts the token information in the URL search parameters (e.g. ?type=email_change)
+    // after a successful redirect. The token has already been verified and consumed by Supabase
+    // before the redirect happens. We just need to check for the presence of the `type` parameter
+    // to confirm that we arrived here from a valid confirmation link.
     const searchParams = new URLSearchParams(window.location.search);
     if (searchParams.get('type') === 'email_change') {
       if (isMounted) {
         setPageState('confirmed');
       }
-    } else if (window.location.hash.includes('type=email_change')) {
-      // Also handle the hash format for robustness, as Supabase has used it.
-      if (isMounted) {
-        setPageState('confirmed');
-      }
     } else {
-      // If the parameters aren't there, it's an invalid attempt to access the page.
+      // If the parameter isn't there, this page was likely accessed directly
+      // or the link was malformed.
       if (isMounted) {
         setPageState('error');
       }
@@ -55,7 +52,7 @@ export default function ConfirmEmailChangePage() {
             <MailCheck className="h-4 w-4 !text-green-600" />
             <AlertTitle className="font-bold text-green-800">Email Confirmed!</AlertTitle>
             <AlertDescription className="text-green-700">
-                Your new email address has been successfully updated.
+                Your new email address has been successfully updated. You can now use it to log in.
             </AlertDescription>
           </Alert>
         );
@@ -98,3 +95,5 @@ export default function ConfirmEmailChangePage() {
     </main>
   );
 }
+
+    
